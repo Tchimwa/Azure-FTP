@@ -8,20 +8,6 @@ locals {
   ftpSKU = "20.04-LTS"
 }
 
-############### SSH Key##############
-
-resource "azurerm_ssh_public_key" "eveKey" {
-    location = var.location
-    name = "Eve-SSHKey"
-    resource_group_name = azurerm_resource_group.eve_project.name
-    public_key = "/home/tchimwa/.ssh/id_rsa.pub"
-    
-    tags = {
-      "Project" = "Eve-ng"
-      "Resources" = "Eve Server"
-    }
-}
-
 ########## Creation of NSG and security rules #########
 
 resource "azurerm_network_security_group" "ftp" {
@@ -453,7 +439,7 @@ resource "azurerm_linux_virtual_machine" "eve" {
   admin_ssh_key { 
 
     username = var.username
-    public_key = azurerm_ssh_public_key.eveKey.public_key
+    public_key = file("/home/tchimwa/.ssh/id_rsa.pub")
   }
 
   connection {
