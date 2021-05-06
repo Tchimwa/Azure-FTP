@@ -236,7 +236,7 @@ resource "azurerm_network_interface" "ftp_nic" {
   enable_ip_forwarding = false
   
   ip_configuration {
-    name = "ftpsrv-ipconfig"
+    name = "ftpipconfig${count.index}"
     subnet_id = azurerm_subnet.ftp.id
     private_ip_address_allocation = "dynamic" 
   }
@@ -344,6 +344,7 @@ resource "azurerm_lb" "ftpSLB" {
   resource_group_name = azurerm_resource_group.project.name
 
   frontend_ip_configuration {
+
     name = "ftpSLB_ipconfig"
     public_ip_address_id = azurerm_public_ip.slb_ip.id
     subnet_id = azurerm_subnet.slb.id
@@ -366,7 +367,7 @@ resource "azurerm_lb_backend_address_pool" "ftpPool" {
 resource "azurerm_network_interface_backend_address_pool_association" "ftpnicAssoc" {
   count = local.instance_count
   network_interface_id = azurerm_network_interface.ftp_nic[count.index].id
-  ip_configuration_name = azurerm_network_interface.ftp_nic[count.index].ip_configuration.name
+  ip_configuration_name =  "ftpipconfig${count.index}"
   backend_address_pool_id = azurerm_lb_backend_address_pool.ftpPool.id
 }
 
@@ -374,7 +375,7 @@ resource "azurerm_lb_rule" "ftpConnection" {
   name = "ftp_Connection"
   resource_group_name = azurerm_lb.ftpSLB.resource_group_name
   loadbalancer_id = azurerm_lb.ftpSLB.id
-  frontend_ip_configuration_name = azurerm_lb.ftpSLB.frontend_ip_configuration[0]
+  frontend_ip_configuration_name = "ftpSLB_ipconfig"
 
   protocol = "Tcp"
   frontend_port = 21
@@ -388,7 +389,7 @@ resource "azurerm_lb_rule" "ftpData" {
   resource_group_name = azurerm_lb.ftpSLB.resource_group_name
   loadbalancer_id = azurerm_lb.ftpSLB.id
   backend_address_pool_id = azurerm_lb_backend_address_pool.ftpPool.id
-  frontend_ip_configuration_name = azurerm_lb.ftpSLB.frontend_ip_configuration[0]
+  frontend_ip_configuration_name = "ftpSLB_ipconfig"
 
   protocol = "Tcp"
   frontend_port = "1000${count.index}"
