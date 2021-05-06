@@ -14,9 +14,8 @@ resource "azurerm_ssh_public_key" "eveKey" {
     location = var.location
     name = "Eve-SSHKey"
     resource_group_name = azurerm_resource_group.eve_project.name
-    public_key = file("/home/tchimwa/.ssh/id_rsa")
-
-
+    public_key = "/home/tchimwa/.ssh/id_rsa.pub"
+    
     tags = {
       "Project" = "Eve-ng"
       "Resources" = "Eve Server"
