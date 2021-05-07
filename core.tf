@@ -451,7 +451,8 @@ resource "azurerm_linux_virtual_machine" "eve" {
   provisioner "remote-exec" {
     inline = [
       "sudo apt update",
-      "sudo apt upgrade"
+      "sudo apt upgrade",
+      "sudo apt install vsftpd"
 
     ]
   }
@@ -473,7 +474,7 @@ resource "azurerm_linux_virtual_machine" "ftp" {
   disable_password_authentication = false
   network_interface_ids = [azurerm_network_interface.ftp_nic[count.index].id]
   size = var.VMSize
-  
+
   source_image_reference {
     publisher = "canonical"
     offer = local.vmOffer
