@@ -2,7 +2,7 @@
 
 locals {
   instance_count = 2
-  eveDnsLabel = "eve-ng"
+  eveDnsLabel = "lecedeve89"
   vmOffer = "UbuntuServer"
   eveSKU = "16.04-LTS"
   ftpSKU = "20.04-LTS"
@@ -98,7 +98,7 @@ resource "azurerm_network_security_group" "eve" {
 }
 
 resource "azurerm_network_security_group" "bastion" {
-  name       =    "ftp-bastion"
+  name       =    "bastion-nsg"
   resource_group_name = azurerm_resource_group.project.name
   location   =    var.location
 
@@ -108,9 +108,114 @@ resource "azurerm_network_security_group" "bastion" {
     destination_address_prefix = "*"
     destination_port_range = "22"
     direction = "Inbound"
-    name = "ssh"
+    name = "AllowSSHInbound"
+    priority = 101
+    protocol = "Tcp"
+    source_address_prefix = "*"
+    source_port_range = "*"
+
+  }
+
+  security_rule {
+    access = "Allow"
+    description = "Allow traffic on port 443 from Internet"
+    destination_address_prefix = "*"
+    destination_port_range = "443"
+    direction = "Inbound"
+    name = "AllowHttpsInbound"
     priority = 110
     protocol = "Tcp"
+    source_address_prefix = "Internet"
+    source_port_range = "*"
+
+  }
+  security_rule {
+    access = "Allow"
+    description = "Allow traffic on port 443 for Gateway Manager"
+    destination_address_prefix = "*"
+    destination_port_range = "443"
+    direction = "Inbound"
+    name = "AllowGatewayManagerInbound"
+    priority = 120
+    protocol = "Tcp"
+    source_address_prefix = "GatewayManager"
+    source_port_range = "*"
+  }
+
+  security_rule {
+    access = "Allow"
+    description = "Allow traffic on port 443 for the Azure Load Balancer"
+    destination_address_prefix = "*"
+    destination_port_range = "443"
+    direction = "Inbound"
+    name = "AllowAzureLoadBalancerInbound"
+    priority = 130
+    protocol = "Tcp"
+    source_address_prefix = "AzureLoadBalancer"
+    source_port_range = "*"
+  }
+
+  security_rule {
+    access = "Allow"
+    description = "Allow traffic from the VNET for the Bastion components"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_ranges = ["8080", "5701"]
+    direction = "Inbound"
+    name = "AllowBastionHostCommunication"
+    priority = 140
+    protocol = "Any"
+    source_address_prefix = "VirtualNetwork"
+    source_port_range = "*"
+  }
+
+  security_rule {
+    access = "Allow"
+    description = "Allow traffic to other target VM subnets for port 3389 and 22."
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_ranges = ["3389", "22"]
+    direction = "Outbound"
+    name = "AllowSshRdpOutbound"
+    priority = 110
+    protocol = "Any"
+    source_address_prefix = "*"
+    source_port_range = "*"
+  }
+
+  security_rule {
+    access = "Allow"
+    description = "Azure Bastion needs outbound to 443 to AzureCloud service tag"
+    destination_address_prefix = "AzureCloud"
+    destination_port_range = "443"
+    direction = "Outbound"
+    name = "AllowAzureCloudOutbound"
+    priority = 120
+    protocol = "Tcp"
+    source_address_prefix = "*"
+    source_port_range = "*"
+  }
+
+  security_rule {
+    access = "Allow"
+    description = "Allows the components of Azure Bastion to talk to each other."
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_ranges = ["8080", "5701"]
+    direction = "Outbound"
+    name = "AllowBastionCommunicationOutbound"
+    priority = 130
+    protocol = "Any"
+    source_address_prefix = "VirtualNetwork"
+    source_port_range = "*"
+  }
+
+  security_rule {
+    access = "Allow"
+    description = "Azure Bastion needs to be able to communicate with the Internet for session and certificate validation"
+    destination_address_prefix = "Internet"
+    destination_port_range = "80"
+    direction = "Outbound"
+    name = "AllowGetSessionInformation"
+    priority = 140
+    protocol = "Any"
     source_address_prefix = "*"
     source_port_range = "*"
   }
@@ -187,7 +292,7 @@ resource "azurerm_subnet_network_security_group_association" "eve" {
 
 resource "azurerm_public_ip" "bastion_ip" {
   name = "Bastion-PIP"
-  allocation_method = "Dynamic"
+  allocation_method = "Static"
   location = var.location
   resource_group_name = azurerm_resource_group.project.name
   sku = "Standard"
@@ -325,8 +430,9 @@ resource "azurerm_managed_disk" "eveDisk" {
   location = var.location
   resource_group_name = azurerm_resource_group.eve_project.name
   storage_account_type = "Standard_LRS"
-  create_option = "FromImage"
+  create_option = "Empty"
   disk_size_gb = 80
+  image_reference_id = "value"
 
 
   tags = {
@@ -344,11 +450,8 @@ resource "azurerm_lb" "ftpSLB" {
   resource_group_name = azurerm_resource_group.project.name
 
   frontend_ip_configuration {
-
     name = "ftpSLB_ipconfig"
     public_ip_address_id = azurerm_public_ip.slb_ip.id
-    subnet_id = azurerm_subnet.slb.id
-    private_ip_address_allocation = "dynamic"
   }
 
   tags = {
@@ -421,8 +524,7 @@ resource "azurerm_linux_virtual_machine" "eve" {
   disable_password_authentication = false
   admin_username = var.username
   admin_password = var.password
-
-
+  
   source_image_reference {
     publisher = "canonical"
     offer = local.vmOffer
@@ -438,7 +540,6 @@ resource "azurerm_linux_virtual_machine" "eve" {
   }
   
   admin_ssh_key { 
-
     username = var.username
     public_key = file("/home/tchimwa/.ssh/id_rsa.pub")
   }
@@ -465,7 +566,7 @@ resource "azurerm_linux_virtual_machine" "eve" {
 
 resource "azurerm_linux_virtual_machine" "ftp" {
   count = local.instance_count
-  name = "ftpsrv_0${count.index}"
+  name = "ftpsrv0${count.index}"
   location = var.location
   availability_set_id = azurerm_availability_set.slb_as.id
   resource_group_name = azurerm_resource_group.project.name
