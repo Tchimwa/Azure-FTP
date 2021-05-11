@@ -163,7 +163,7 @@ resource "azurerm_network_security_group" "bastion" {
     direction = "Inbound"
     name = "AllowBastionHostCommunication"
     priority = 140
-    protocol = "Any"
+    protocol = "*"
     source_address_prefix = "VirtualNetwork"
     source_port_range = "*"
   }
@@ -176,7 +176,7 @@ resource "azurerm_network_security_group" "bastion" {
     direction = "Outbound"
     name = "AllowSshRdpOutbound"
     priority = 110
-    protocol = "Any"
+    protocol = "*"
     source_address_prefix = "*"
     source_port_range = "*"
   }
@@ -202,7 +202,7 @@ resource "azurerm_network_security_group" "bastion" {
     direction = "Outbound"
     name = "AllowBastionCommunicationOutbound"
     priority = 130
-    protocol = "Any"
+    protocol = "*"
     source_address_prefix = "VirtualNetwork"
     source_port_range = "*"
   }
@@ -215,7 +215,7 @@ resource "azurerm_network_security_group" "bastion" {
     direction = "Outbound"
     name = "AllowGetSessionInformation"
     priority = 140
-    protocol = "Any"
+    protocol = "*"
     source_address_prefix = "*"
     source_port_range = "*"
   }
