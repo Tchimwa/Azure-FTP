@@ -3,9 +3,11 @@
 locals {
   instance_count = 2
   eveDnsLabel = "lecedeve89"
+  publisher = "canonical"
   vmOffer = "UbuntuServer"
   eveSKU = "16.04-LTS"
-  ftpSKU = "20.04-LTS"
+  ftpSKU = "18.04-LTS"
+  versionSKU = "latest"
 }
 
 ########## Creation of NSG and security rules #########
@@ -526,10 +528,10 @@ resource "azurerm_linux_virtual_machine" "eve" {
   admin_password = var.password
   
   source_image_reference {
-    publisher = "canonical"
+    publisher = local.publisher
     offer = local.vmOffer
     sku = local.eveSKU
-    version = "Gen1"   
+    version = local.versionSKU   
   }
 
   os_disk {
@@ -577,10 +579,10 @@ resource "azurerm_linux_virtual_machine" "ftp" {
   size = var.VMSize
 
   source_image_reference {
-    publisher = "canonical"
+    publisher = local.publisher
     offer = local.vmOffer
     sku = local.ftpSKU
-    version = "Latest"   
+    version = local.versionSKU   
   }
 
   os_disk {
